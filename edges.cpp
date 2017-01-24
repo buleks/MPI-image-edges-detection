@@ -7,6 +7,7 @@ using namespace std;
 constexpr int INFO_TAG = 13;
 constexpr int DATA_TAG = 14;
 constexpr int RESULT_TAG = 15;
+constexpr uint8_t THRESHOLD = 20;
 
 int main(int argc,char **argv)
 {
@@ -43,8 +44,6 @@ int main(int argc,char **argv)
 		}
 		img = new Image(size);
 		
-		
-	//	Image img(size);
 		img->readfile(argv[1]);
 		imageSize = img->w*img->h;
 		dataInfo = img->divideImage();
@@ -57,15 +56,11 @@ int main(int argc,char **argv)
 			MPI_Send(&dataInfo[i],1,ProcessDataInfo,i,INFO_TAG,MPI_COMM_WORLD);
 		}
 		
-		//img.calculateedges();
 		uint8_t *image = img->getsourcebuffer();
 		for(int i = 0; i < size;i++)
 		{
 			MPI_Send(&image[dataInfo[i].bufferStart], dataInfo[i].bufferlength, MPI_UINT8_T,i,DATA_TAG,MPI_COMM_WORLD);
-			//cout<<"Data["<<i<<"]"<<"Send"<<endl;
-			//MPI_Isend(&image[dataInfo[i].bufferStart], dataInfo[i].bufferlength, MPI_UINT8_T , i, DATA_TAG, MPI_COMM_WORLD, NULL);
 		}
-	
 		
 	}
 	
@@ -94,46 +89,78 @@ int main(int argc,char **argv)
 	
 	for(int i =0 ; i < partImageSize;i++)
 	{
-	
-		int32_t temp=0;
-		if(true == processDatainfo.first )//first row not exist
-		{
 		
-		} else
-		{//(((i-1) >=0) ?  : 0)
-			temp+=Image::conv[0]*(((i-1) >=0) ? imagePart[i-1] : 0);
-			temp+=Image::conv[1]*imagePart[i];
-			temp+=Image::conv[2]*(((i-1)%w == 0) ? 0 : imagePart[i+1]);
-		}
 		//if(i%w == 0) //first column
 		//((i%w == 0) ?  : 0)
 		
 		//(((i-1)%w == 0) ? 0 : ) //last column
-		
-		temp+=Image::conv[3]*((i%w == 0) ? 0 : imagePart[i+w-1]);
-		temp+=Image::conv[4]*imagePart[i+w];
-		temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+w+2]);
-		
-		if(true == processDatainfo.last )
+	
+		int32_t temp=0;
+		////calculations based on first line of coefficients matrix
+		if(true == processDatainfo.first )//first fragment
 		{
-			
+		 //first line of coefficients matrix shouldnt be calculated
+		 if(i >= w)
+		 {
+			temp+=Image::conv[0]*(((i-1-w) >=0) ? imagePart[i-1-w] : 0);
+			temp+=Image::conv[1]*imagePart[i-w];
+			temp+=Image::conv[2]*(((i-1-w)%w == 0) ? 0 : imagePart[i+1-w]);
+		 }
+		} else
+		{//(((i-1) >=0) ?  : 0)
+			temp+=Image::conv[0]*(((i-1-w) >=0) ? imagePart[i-1-w] : 0);
+			temp+=Image::conv[1]*imagePart[i];
+			temp+=Image::conv[2]*(((i-1-w)%w == 0) ? 0 : imagePart[i+1-w]);
+		}
+		////end of first line of coefficients matrix
+		
+		////calculations based on second line of coefficients matrix
+		if(true == processDatainfo.first )//first fragment
+		{
+			temp+=Image::conv[3]*((i%w == 0) ? 0 : imagePart[i-1]);
+			temp+=Image::conv[4]*imagePart[i];
+			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+2]);
+		}
+		else
+		{
+			temp+=Image::conv[3]*((i%w == 0) ? 0 : imagePart[i+w-1]);
+			temp+=Image::conv[4]*imagePart[i+w];
+			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+w+2]);
+		}
+		
+		////end of calculations based on first line of coefficients matrix
+		
+		if(true == processDatainfo.last )// last 
+		{
+			//lines other than last
+			if(i< (partImageSize-w))
+			{
+				temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
+				temp+=Image::conv[7]*imagePart[i+2*w];
+				temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
+			}
+		}else if(true == processDatainfo.first )//first fragment
+		{
+			temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
+			temp+=Image::conv[7]*imagePart[i+w];
+			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
 		}else
 		{
-			temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+2*w-1]);
+			temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
 			temp+=Image::conv[7]*imagePart[i+2*w];
-			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+2*w+1]);
+			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
 		}
 		processImagePart[i]=temp;	
 		
 		////////////////
 		//copy raw image into image part
-		if(true == processDatainfo.first )
-		{
-			processImagePart[i]=imagePart[i];
-		}else
-		{
-			processImagePart[i]=imagePart[i+w];
-		}
+		//if(true == processDatainfo.first )
+		//{
+		//	processImagePart[i]=imagePart[i];
+		//}else
+		//{
+		//	processImagePart[i]=imagePart[i+w];
+		//}
 		//end raw image
 		////////
 		//if(temp>50)
