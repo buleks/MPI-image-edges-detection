@@ -7,7 +7,7 @@ using namespace std;
 constexpr int INFO_TAG = 13;
 constexpr int DATA_TAG = 14;
 constexpr int RESULT_TAG = 15;
-constexpr uint8_t THRESHOLD = 20;
+constexpr uint8_t THRESHOLD = 30;
 
 int main(int argc,char **argv)
 {
@@ -130,27 +130,24 @@ int main(int argc,char **argv)
 		
 		////end of calculations based on first line of coefficients matrix
 		
-		if(true == processDatainfo.last )// last 
-		{
-			//lines other than last
-			if(i< (partImageSize-w))
-			{
-				temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
-				temp+=Image::conv[7]*imagePart[i+2*w];
-				temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
-			}
-		}else if(true == processDatainfo.first )//first fragment
+		
+		//third line of matrix
+		if(true == processDatainfo.first )//first fragment
 		{
 			temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
 			temp+=Image::conv[7]*imagePart[i+w];
 			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
 		}else
 		{
-			temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
-			temp+=Image::conv[7]*imagePart[i+2*w];
-			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
+			if(!(true == processDatainfo.last && i>= (partImageSize-w))) //all lines without last line in last fragment
+			{
+				temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
+				temp+=Image::conv[7]*imagePart[i+2*w];
+				temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
+			}
+			
 		}
-		processImagePart[i]=temp;	
+			
 		
 		////////////////
 		//copy raw image into image part
@@ -163,14 +160,14 @@ int main(int argc,char **argv)
 		//}
 		//end raw image
 		////////
-		//if(temp>50)
-		//{
-		//	edges[i]=0xff;
-		//}
-		//else
-		//{
-		//	edges[i]=0;
-		//}
+		if(temp>THRESHOLD)
+		{
+			processImagePart[i]=0xff;
+		}
+		else
+		{
+			processImagePart[i]=0;
+		}
 	}
 
 	//std::ostringstream file;
