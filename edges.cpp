@@ -1,8 +1,11 @@
 #include "edges.h"
 #include <mpi.h>
 #include <sstream>
+#include <chrono>
+
 
 using namespace std;
+using namespace std::chrono;
 
 constexpr int INFO_TAG = 13;
 constexpr int DATA_TAG = 14;
@@ -40,6 +43,9 @@ int main(int argc,char **argv)
 	{
 		treshold = atoi(argv[2]);
 	}
+	
+	high_resolution_clock::time_point t1;
+	high_resolution_clock::time_point t2;
 	if(rank == 0)
 	{
 		if(argc < 2)
@@ -51,6 +57,9 @@ int main(int argc,char **argv)
 		img = new Image(size);
 		string inputFileName = argv[1];
 		img->readfile(inputFileName);
+		
+		t1 = high_resolution_clock::now();
+		
 		imageSize = img->w*img->h;
 		dataInfo = img->divideImage();
 		img->printprocessinfo();
@@ -213,7 +222,7 @@ int main(int argc,char **argv)
 		cout<<"Received gathered data"<<endl;
 	}
 	delete processImagePart; //remove process image buffer
-	
+	t2 = high_resolution_clock::now();
 	
 	if(rank == 0)
 	{
@@ -222,6 +231,8 @@ int main(int argc,char **argv)
 		FreeImage_Save(FIF_PNG,edge,file.str().c_str(),0);
 		FreeImage_Unload(edge);
 		delete img;
+		auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+		cout <<"Execution time"<< duration/1000<<" ms"<<endl;
 	}
 	MPI_Type_free(&ProcessDataInfo);
 	MPI_Finalize();
