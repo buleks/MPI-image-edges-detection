@@ -182,6 +182,7 @@ int main(int argc,char **argv)
 		{
 			processImagePart[i]=0;
 		}
+		processImagePart[i]=temp;
 	}
 
 
