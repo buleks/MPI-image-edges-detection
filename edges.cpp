@@ -35,29 +35,34 @@ int main(int argc,char **argv)
 	int imageSize=0;
 	Image *img;
 	Image::fragment_info *dataInfo;
+	uint8_t treshold = THRESHOLD ;
 	if(rank == 0)
 	{
-		if(argc != 2)
+		if(argc < 2)
 		{
-			cout<<"Needs file name as argument\n";
+			cout<<"Needs file name as argument. Optionally threshold(range 0-255). For example ./edge 1.jpg 10\n";
 			exit(1);
 		}
+		if(argc == 3)
+		{
+			treshold = atoi(argv[2]);
+		}
 		img = new Image(size);
-		
-		img->readfile(argv[1]);
+		string inputFileName = argv[1];
+		img->readfile(inputFileName);
 		imageSize = img->w*img->h;
 		dataInfo = img->divideImage();
 		img->printprocessinfo();
 		
 		
 		
-		for(int i = 0; i < size;i++)
+		for(int i = 1; i < size;i++)
 		{
 			MPI_Send(&dataInfo[i],1,ProcessDataInfo,i,INFO_TAG,MPI_COMM_WORLD);
 		}
 		
 		uint8_t *image = img->getsourcebuffer();
-		for(int i = 0; i < size;i++)
+		for(int i = 1; i < size;i++)
 		{
 			MPI_Send(&image[dataInfo[i].bufferStart], dataInfo[i].bufferlength, MPI_UINT8_T,i,DATA_TAG,MPI_COMM_WORLD);
 		}
@@ -66,23 +71,32 @@ int main(int argc,char **argv)
 	
 	Image::fragment_info processDatainfo;
 	MPI_Status status;
-	MPI_Recv(&processDatainfo,1,ProcessDataInfo,0,INFO_TAG,MPI_COMM_WORLD,&status);
+	if(rank != 0)
+	{
+		MPI_Recv(&processDatainfo,1,ProcessDataInfo,0,INFO_TAG,MPI_COMM_WORLD,&status);
+	}else
+	{
+		processDatainfo = dataInfo[0];
+	}
 	cout<<"Rank"<<rank<<" rows:"<<processDatainfo.rows<<" start:"<<processDatainfo.bufferStart<<" length:"<< processDatainfo.bufferlength<<" first:"<<processDatainfo.first<<" last:"<<processDatainfo.last<<std::endl;
 	uint8_t *imagePart = new uint8_t[processDatainfo.bufferlength];
 
-	//FreeImage_Initialise();
-	//FIBITMAP *tempedge = FreeImage_Allocate(processDatainfo.width, processDatainfo.rows+2, 8);
-	//uint8_t *tempImage = (uint8_t *)FreeImage_GetBits(tempedge);
-
-	//MPI_Recv(tempImage,processDatainfo.bufferlength,MPI_UINT8_T,0,DATA_TAG,MPI_COMM_WORLD,&status);
-	MPI_Recv(imagePart,processDatainfo.bufferlength,MPI_UINT8_T,0,DATA_TAG,MPI_COMM_WORLD,&status);
-	cout<<"Received image fragment"<<endl;
-	//FreeImage_Initialise();	
+	if(rank == 0)
+	{
+		uint8_t *temp = img->getsourcebuffer();
+		memcpy(imagePart,temp,processDatainfo.bufferlength);
+	}
+	else
+	{
+		MPI_Recv(imagePart,processDatainfo.bufferlength,MPI_UINT8_T,0,DATA_TAG,MPI_COMM_WORLD,&status);
+		cout<<"Received image fragment"<<endl;
+	}
+	
+		
+	
 	int w = processDatainfo.width;
 	int partImageSize = processDatainfo.width*processDatainfo.rows;
-	//FIBITMAP *edge = FreeImage_Allocate(processDatainfo.width, processDatainfo.rows, 8);
-	//uint8_t *edgepixels = (uint8_t *)FreeImage_GetBits(edge);
-	//memcpy(edgepixels,imagePart,processDatainfo.width* processDatainfo.rows);
+	
 	uint8_t *processImagePart = new uint8_t[partImageSize];
 	
 	
@@ -160,7 +174,7 @@ int main(int argc,char **argv)
 		//}
 		//end raw image
 		////////
-		if(temp>THRESHOLD)
+		if(temp>treshold)
 		{
 			processImagePart[i]=0xff;
 		}
@@ -170,10 +184,7 @@ int main(int argc,char **argv)
 		}
 	}
 
-	//std::ostringstream file;
-	//file << "e"<<rank;
-		//FreeImage_Save(FIF_PNG,tempedge,file.str().c_str(),0);
-		//FreeImage_Unload(tempedge);
+
 	delete imagePart;
 
 	int *receiveCounts = new int[size];
@@ -201,16 +212,13 @@ int main(int argc,char **argv)
 	}
 	delete processImagePart; //remove process image buffer
 	
+	
 	if(rank == 0)
 	{
 		std::ostringstream file;
-		file << "result"<<rank;
+		file << "e_"<<img->inputFileName;
 		FreeImage_Save(FIF_PNG,edge,file.str().c_str(),0);
 		FreeImage_Unload(edge);
-		//FreeImage_DeInitialise();
-	}
-	if(rank == 0)
-	{
 		delete img;
 	}
 	MPI_Type_free(&ProcessDataInfo);

@@ -16,7 +16,7 @@ class Image
 	int scan_width;
 	
 	
-	BYTE *bitmappixels;
+	uint8_t *bitmappixels;
 	int world_size;
 	
 	public:
@@ -26,6 +26,7 @@ class Image
 		FreeImage_Initialise();	
 	}
 
+	std::string inputFileName;
 	static constexpr int32_t conv[9] = {0,1,0,1,-4,1,0,1,0};
 	//static constexpr int32_t conv[9] = {0,0,0,1,-1,0,0,0,0};
 	int w,h;
@@ -140,7 +141,7 @@ class Image
 	bool readfile(std::string img_filename)
 	{
 		FREE_IMAGE_FORMAT format;
-
+		inputFileName = img_filename;
 		format = FreeImage_GetFileType(img_filename.c_str());
 		if(format == FIF_UNKNOWN )
 		{
@@ -163,49 +164,20 @@ class Image
 		std::cout<<"Width:"<<w<<"Height"<<h<<std::endl;
 		std::cout<<"Bpp:"<<bpp<<std::endl;
 		std::cout<<"Pitch:"<<scan_width<<std::endl;
+		
+		FIBITMAP *old_bitmap = bitmap;
+		bitmap = FreeImage_ConvertToGreyscale(bitmap);
+		bitmappixels = (uint8_t*)FreeImage_GetBits(bitmap);
+		FreeImage_Unload(old_bitmap);
 		return true;
 	}
 	
 	uint8_t* getsourcebuffer()
 	{
-		FIBITMAP *old_bitmap = bitmap;
-		bitmap = FreeImage_ConvertToGreyscale(bitmap);
-		bitmappixels = (BYTE*)FreeImage_GetBits(bitmap);
-		FreeImage_Unload(old_bitmap);
+		
 		return bitmappixels;
 	}
 	
-	void calculateedges()
-	{
-		FIBITMAP *edge = FreeImage_Allocate(w, h, 8);
-		BYTE *edgepixels = (BYTE*)FreeImage_GetBits(edge);
-		
-		
-		FIBITMAP *old_bitmap = bitmap;
-		bitmap = FreeImage_ConvertToGreyscale(bitmap);
-		uint8_t *bitmappixels = (uint8_t*)FreeImage_GetBits(bitmap);
-		
-		for(int i =1+w ; i < w*h-1-w;i++)
-		{
-			//edgepixels[i] = bitmappixels[i];
-			edgepixels[i]=0;
-		
-			edgepixels[i]+=conv[0]+bitmappixels[i-w-1];
-			edgepixels[i]+=conv[1]+bitmappixels[i-w];
-			edgepixels[i]+=conv[2]+bitmappixels[i-w+1];
-			edgepixels[i]+=conv[3]+bitmappixels[i-1];
-			edgepixels[i]+=conv[4]+bitmappixels[i];
-			edgepixels[i]+=conv[5]+bitmappixels[i+1];
-			edgepixels[i]+=conv[6]+bitmappixels[i+w-1];
-			edgepixels[i]+=conv[7]+bitmappixels[i+w];
-			edgepixels[i]+=conv[8]+bitmappixels[i+w+1];
-			
-		}
-		
-		FreeImage_Save(FIF_PNG,edge,"result.png",0);
-		FreeImage_Unload(edge);
-	
-	}
 	~Image()
 	{
 		FreeImage_Unload(bitmap);
