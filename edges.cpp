@@ -36,6 +36,10 @@ int main(int argc,char **argv)
 	Image *img;
 	Image::fragment_info *dataInfo;
 	uint8_t treshold = THRESHOLD ;
+	if(argc == 3)
+	{
+		treshold = atoi(argv[2]);
+	}
 	if(rank == 0)
 	{
 		if(argc < 2)
@@ -43,10 +47,7 @@ int main(int argc,char **argv)
 			cout<<"Needs file name as argument. Optionally threshold(range 0-255). For example ./edge 1.jpg 10\n";
 			exit(1);
 		}
-		if(argc == 3)
-		{
-			treshold = atoi(argv[2]);
-		}
+		
 		img = new Image(size);
 		string inputFileName = argv[1];
 		img->readfile(inputFileName);
@@ -182,7 +183,7 @@ int main(int argc,char **argv)
 		{
 			processImagePart[i]=0;
 		}
-		processImagePart[i]=temp;
+		
 	}
 
 
