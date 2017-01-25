@@ -122,9 +122,9 @@ int main(int argc,char **argv)
 		 }
 		} else
 		{//(((i-1) >=0) ?  : 0)
-			temp+=Image::conv[0]*(((i-1-w) >=0) ? imagePart[i-1-w] : 0);
+			temp+=Image::conv[0]*(((i-1) >=0) ? imagePart[i-1] : 0);
 			temp+=Image::conv[1]*imagePart[i];
-			temp+=Image::conv[2]*(((i-1-w)%w == 0) ? 0 : imagePart[i+1-w]);
+			temp+=Image::conv[2]*(((i-1)%w == 0) ? 0 : imagePart[i+1]);
 		}
 		////end of first line of coefficients matrix
 		
@@ -133,13 +133,13 @@ int main(int argc,char **argv)
 		{
 			temp+=Image::conv[3]*((i%w == 0) ? 0 : imagePart[i-1]);
 			temp+=Image::conv[4]*imagePart[i];
-			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+2]);
+			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+1]);
 		}
 		else
 		{
 			temp+=Image::conv[3]*((i%w == 0) ? 0 : imagePart[i+w-1]);
 			temp+=Image::conv[4]*imagePart[i+w];
-			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+w+2]);
+			temp+=Image::conv[5]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
 		}
 		
 		////end of calculations based on first line of coefficients matrix
@@ -153,11 +153,11 @@ int main(int argc,char **argv)
 			temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
 		}else
 		{
-			if(!(true == processDatainfo.last && i>= (partImageSize-w))) //all lines without last line in last fragment
+			//if(!(true == processDatainfo.last && i>= (partImageSize-w))) //all lines without last line in last fragment
 			{
-				temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+w-1]);
+				temp+=Image::conv[6]*((i%w == 0) ? 0 : imagePart[i+2*w-1]);
 				temp+=Image::conv[7]*imagePart[i+2*w];
-				temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+w+1]);
+				temp+=Image::conv[8]*(((i-1)%w == 0) ? 0 : imagePart[i+2*w+1]);
 			}
 			
 		}
